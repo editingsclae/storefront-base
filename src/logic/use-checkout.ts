@@ -49,8 +49,10 @@ export function useCheckout() {
   const [selectedShippingOptionId, setSelectedShippingOptionId] = useState<string>("");
   const [shippingLoading, setShippingLoading] = useState(false);
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const fetchedShippingCartIdRef = React.useRef<string | null>(null);
 
   // Autofill customer data if logged in
   useEffect(() => {
@@ -119,12 +121,15 @@ export function useCheckout() {
         token || undefined
       );
 
-      // 2. Fetch shipping options
-      const options = await getShippingOptions(cart.id);
-      setShippingOptions(options);
+      // 2. Fetch shipping options (once per cart)
+      if (fetchedShippingCartIdRef.current !== cart.id || shippingOptions.length === 0) {
+        const options = await getShippingOptions(cart.id);
+        setShippingOptions(options);
+        fetchedShippingCartIdRef.current = cart.id;
 
-      if (options.length > 0) {
-        setSelectedShippingOptionId(options[0].id);
+        if (options.length > 0) {
+          setSelectedShippingOptionId(options[0].id);
+        }
       }
       await refreshCart();
       setStep("shipping");
@@ -207,6 +212,7 @@ export function useCheckout() {
         if (!token) {
           rememberGuestOrder(orderId);
         }
+        setOrderPlaced(true);
         startTransition(() => {
           router.push(`/order/confirmed/${orderId}`);
         });
@@ -255,6 +261,7 @@ export function useCheckout() {
     selectedShippingOption,
     shippingLoading,
     submittingOrder,
+    orderPlaced,
     errorMessage,
     fieldErrors,
     handleSaveAddress,

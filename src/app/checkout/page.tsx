@@ -33,6 +33,7 @@ export default function CheckoutPage() {
     setSelectedShippingOptionId,
     shippingLoading,
     submittingOrder,
+    orderPlaced,
     errorMessage,
     fieldErrors,
     handleSaveAddress,
@@ -49,7 +50,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!cart || items.length === 0) {
+  if (!submittingOrder && !orderPlaced && (!cart || items.length === 0)) {
     return (
       <div className="max-w-md mx-auto py-16 text-center border border-dashed border-zinc-200 rounded-xl space-y-4">
         <AlertCircle size={40} className="mx-auto text-zinc-400" />

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Banner } from "@/lib/medusa";
+import { Banner } from "@/logic";
 import { BannerContent } from "@/components/BannerContent";
 
 const AUTOPLAY_MS = 6000;

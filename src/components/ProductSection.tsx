@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Product } from "@/lib/medusa";
+import { Product } from "@/logic";
 import { ProductCard } from "@/components/ProductCard";
 
 interface ProductSectionProps {

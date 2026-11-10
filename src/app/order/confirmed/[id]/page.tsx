@@ -1,5 +1,5 @@
 import React from "react";
-import { showVariantTitle } from "@/lib/variant-select";
+import { showVariantTitle } from "@/logic";
 import Link from "next/link";
 import {
   getOrder,

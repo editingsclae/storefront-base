@@ -1,5 +1,5 @@
 import React from "react";
-import { Banner } from "@/lib/medusa";
+import { Banner } from "@/logic";
 import { BannerContent } from "@/components/BannerContent";
 import { visiblePromoBanners } from "@/lib/declare-layout";
 

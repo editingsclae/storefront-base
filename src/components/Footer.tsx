@@ -6,7 +6,7 @@ import {
   cleanCategoryHandle,
   getFooterSettings,
   type FooterNetwork,
-} from "@/lib/medusa";
+} from "@/logic";
 
 function SocialIcon({ network }: { network: FooterNetwork }) {
   const common = {

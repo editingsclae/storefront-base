@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import { Banner, bannerHref } from "@/lib/medusa";
+import { Banner, bannerHref } from "@/logic";
 
 interface BannerContentProps {
   banner: Banner;

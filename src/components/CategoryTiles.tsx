@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { LayoutGrid } from "lucide-react";
-import { CategoryTile, cleanCategoryHandle } from "@/lib/medusa";
+import { CategoryTile, cleanCategoryHandle } from "@/logic";
 
 interface CategoryTilesProps {
   tiles: CategoryTile[];

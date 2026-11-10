@@ -4,7 +4,7 @@ import type {
   RichInline,
   RichListBlock,
   RichText,
-} from "@/lib/medusa";
+} from "@/logic";
 
 // Draws the blocks of a support page. The backend and getFooterPage have
 // already removed everything unsafe: links are https, http, mailto: or tel:.

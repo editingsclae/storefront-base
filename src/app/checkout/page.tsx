@@ -10,7 +10,7 @@ import {
   Lock,
   ArrowLeft,
 } from "lucide-react";
-import { formatPrice } from "@/lib/medusa";
+import { formatPrice } from "@/logic";
 import { showVariantTitle } from "@/logic/variant-select";
 import { useCheckout } from "@/logic/use-checkout";
 

@@ -96,6 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
               localStorage.removeItem(TOKEN_KEY);
               document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
+              localStorage.removeItem(CART_KEY);
+              document.cookie = `${CART_KEY}=; path=/; max-age=0`;
               setToken(null);
             }
           }

@@ -1,18 +1,24 @@
 "use client";
 
-import { showVariantTitle } from "@/lib/variant-select";
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useCart } from "@/context/CartContext";
-import { formatPrice } from "@/lib/medusa";
+import { formatPrice } from "@/logic";
+import { getLineItemState } from "@/logic/cart-view";
+import { useCartPage } from "@/logic/use-cart-view";
 import { Trash2, ShoppingBag, ArrowRight, Package } from "lucide-react";
 
 export default function CartPage() {
-  const { cart, isLoading, updateQuantity, removeItem } = useCart();
-
-  const items = cart?.items || [];
-  const currencyCode = cart?.currency_code || "TND";
+  const {
+    cart,
+    isLoading,
+    items,
+    currencyCode,
+    totals,
+    itemCount,
+    updateQuantity,
+    removeItem,
+  } = useCartPage();
 
   if (isLoading && !cart) {
     return (
@@ -51,85 +57,89 @@ export default function CartPage() {
           Shopping Cart
         </h1>
         <span className="text-xs font-mono text-zinc-500">
-          {items.length} {items.length === 1 ? "item" : "items"}
+          {itemCount} {itemCount === 1 ? "item" : "items"}
         </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Line Items List */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex gap-4 p-4 rounded-lg border border-zinc-200 bg-white"
-            >
-              {/* Item Thumbnail */}
-              <div className="relative w-20 h-20 bg-zinc-100 rounded-md overflow-hidden shrink-0 border border-zinc-100 flex items-center justify-center">
-                {item.thumbnail ? (
-                  <Image
-                    src={item.thumbnail}
-                    alt={item.title}
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <Package size={24} className="text-zinc-400" />
-                )}
-              </div>
+          {items.map((item) => {
+            const lineState = getLineItemState(item);
 
-              {/* Item Details */}
-              <div className="flex-1 flex flex-col justify-between">
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <h3 className="font-semibold text-sm text-zinc-900">
-                      {item.title}
-                    </h3>
-                    {showVariantTitle(item.variant_title) && (
-                      <p className="text-xs text-zinc-500">{item.variant_title}</p>
-                    )}
-                    <p className="text-xs font-mono text-zinc-600 mt-0.5">
-                      {formatPrice(item.unit_price, currencyCode)} each
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="p-1.5 text-zinc-400 hover:text-rose-600 transition"
-                    title="Remove item"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+            return (
+              <div
+                key={item.id}
+                className="flex gap-4 p-4 rounded-lg border border-zinc-200 bg-white"
+              >
+                {/* Item Thumbnail */}
+                <div className="relative w-20 h-20 bg-zinc-100 rounded-md overflow-hidden shrink-0 border border-zinc-100 flex items-center justify-center">
+                  {item.thumbnail ? (
+                    <Image
+                      src={item.thumbnail}
+                      alt={item.title}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <Package size={24} className="text-zinc-400" />
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
-                  {/* Quantity controls */}
-                  <div className="flex items-center border border-zinc-300 rounded bg-zinc-50 text-xs">
+                {/* Item Details */}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <h3 className="font-semibold text-sm text-zinc-900">
+                        {item.title}
+                      </h3>
+                      {lineState.showVariant && (
+                        <p className="text-xs text-zinc-500">{item.variant_title}</p>
+                      )}
+                      <p className="text-xs font-mono text-zinc-600 mt-0.5">
+                        {formatPrice(item.unit_price, currencyCode)} each
+                      </p>
+                    </div>
+
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="px-2.5 py-1 text-zinc-700 hover:bg-zinc-200 font-bold transition"
+                      onClick={() => removeItem(item.id)}
+                      className="p-1.5 text-zinc-400 hover:text-rose-600 transition"
+                      title="Remove item"
                     >
-                      -
-                    </button>
-                    <span className="px-3 py-1 font-semibold min-w-8 text-center bg-white">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="px-2.5 py-1 text-zinc-700 hover:bg-zinc-200 font-bold transition"
-                    >
-                      +
+                      <Trash2 size={16} />
                     </button>
                   </div>
 
-                  {/* Line Total */}
-                  <div className="text-sm font-bold text-zinc-900">
-                    {formatPrice(item.subtotal || item.unit_price * item.quantity, currencyCode)}
+                  <div className="flex items-center justify-between pt-2">
+                    {/* Quantity controls */}
+                    <div className="flex items-center border border-zinc-300 rounded bg-zinc-50 text-xs">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="px-2.5 py-1 text-zinc-700 hover:bg-zinc-200 font-bold transition"
+                      >
+                        -
+                      </button>
+                      <span className="px-3 py-1 font-semibold min-w-8 text-center bg-white">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="px-2.5 py-1 text-zinc-700 hover:bg-zinc-200 font-bold transition"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* Line Total */}
+                    <div className="text-sm font-bold text-zinc-900">
+                      {formatPrice(lineState.lineTotal, currencyCode)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Order Summary Box */}
@@ -142,28 +152,28 @@ export default function CartPage() {
             <div className="flex justify-between text-zinc-600">
               <span>Items</span>
               <span className="font-semibold font-mono text-zinc-900">
-                {formatPrice(cart?.item_subtotal ?? cart?.subtotal, currencyCode)}
+                {formatPrice(totals.itemsSubtotal, currencyCode)}
               </span>
             </div>
 
             <div className="flex justify-between text-zinc-600">
               <span>Shipping</span>
               <span className="font-mono text-zinc-900">
-                {cart?.shipping_subtotal !== undefined && cart.shipping_subtotal > 0
-                  ? formatPrice(cart.shipping_subtotal, currencyCode)
-                  : (
-                    <span className="text-zinc-500 italic font-sans font-normal">
-                      Calculated at checkout
-                    </span>
-                  )}
+                {totals.hasShippingSubtotal ? (
+                  formatPrice(totals.shippingSubtotal!, currencyCode)
+                ) : (
+                  <span className="text-zinc-500 italic font-sans font-normal">
+                    Calculated at checkout
+                  </span>
+                )}
               </span>
             </div>
 
-            {cart?.tax_total !== undefined && cart.tax_total > 0 && (
+            {totals.hasTaxTotal && (
               <div className="flex justify-between text-zinc-600">
                 <span>VAT</span>
                 <span className="font-mono text-zinc-900">
-                  {formatPrice(cart.tax_total, currencyCode)}
+                  {formatPrice(totals.taxTotal!, currencyCode)}
                 </span>
               </div>
             )}
@@ -171,7 +181,7 @@ export default function CartPage() {
             <div className="pt-3 border-t border-zinc-200 flex justify-between text-sm font-extrabold text-zinc-900">
               <span>Total</span>
               <span className="font-mono">
-                {formatPrice(cart?.total || cart?.subtotal, currencyCode)}
+                {formatPrice(totals.total, currencyCode)}
               </span>
             </div>
           </div>

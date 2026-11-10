@@ -1,111 +1,29 @@
 "use client";
 
-import { showVariantTitle } from "@/lib/variant-select";
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { useCart } from "@/context/CartContext";
-import { formatPrice } from "@/lib/medusa";
+import { formatPrice } from "@/logic";
+import { getLineItemState } from "@/logic/cart-view";
+import { useCartDrawer } from "@/logic/use-cart-view";
 import { X, Trash2, Package, ShoppingBag, ArrowRight } from "lucide-react";
 
 export function CartDrawer() {
-  const { cart, isCartOpen, closeCart, updateQuantity, removeItem } = useCart();
-  const pathname = usePathname();
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
-  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
-  const wasOpenRef = useRef(false);
-
-  const [busyLineId, setBusyLineId] = useState<string | null>(null);
-  const [lineErrors, setLineErrors] = useState<Record<string, string>>({});
-
-  // Close when route changes
-  useEffect(() => {
-    closeCart();
-  }, [pathname, closeCart]);
-
-  // Handle open/close side-effects: body scroll lock and focus management
-  useEffect(() => {
-    if (isCartOpen) {
-      wasOpenRef.current = true;
-      previouslyFocusedElementRef.current = document.activeElement as HTMLElement | null;
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-
-      // Small delay to ensure drawer DOM is mounted before focusing
-      const timer = setTimeout(() => {
-        closeButtonRef.current?.focus();
-      }, 50);
-
-      return () => {
-        clearTimeout(timer);
-        document.body.style.overflow = originalOverflow;
-      };
-    } else if (wasOpenRef.current) {
-      // Only after the drawer was open: return focus to the header cart button
-      // or the previous element. Doing it on the first render would pull focus
-      // to the cart button on every page load.
-      wasOpenRef.current = false;
-      const cartBtn = document.getElementById("header-cart-button");
-      if (cartBtn) {
-        cartBtn.focus();
-      } else if (previouslyFocusedElementRef.current) {
-        previouslyFocusedElementRef.current.focus();
-      }
-    }
-  }, [isCartOpen]);
-
-  // Handle ESC key to close
-  useEffect(() => {
-    if (!isCartOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        closeCart();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isCartOpen, closeCart]);
+  const {
+    isCartOpen,
+    closeCart,
+    closeButtonRef,
+    items,
+    currencyCode,
+    subtotal,
+    itemCount,
+    busyLineId,
+    lineErrors,
+    handleUpdateQuantity,
+    handleRemoveItem,
+  } = useCartDrawer();
 
   if (!isCartOpen) return null;
-
-  const items = cart?.items || [];
-  const currencyCode = cart?.currency_code || "TND";
-  const subtotal = cart?.item_subtotal ?? cart?.subtotal ?? 0;
-
-  const handleUpdateQuantity = async (lineItemId: string, newQty: number) => {
-    setLineErrors((prev) => {
-      const copy = { ...prev };
-      delete copy[lineItemId];
-      return copy;
-    });
-    setBusyLineId(lineItemId);
-    try {
-      await updateQuantity(lineItemId, newQty);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Unable to update quantity.";
-      setLineErrors((prev) => ({ ...prev, [lineItemId]: msg }));
-    } finally {
-      setBusyLineId(null);
-    }
-  };
-
-  const handleRemoveItem = async (lineItemId: string) => {
-    setLineErrors((prev) => {
-      const copy = { ...prev };
-      delete copy[lineItemId];
-      return copy;
-    });
-    setBusyLineId(lineItemId);
-    try {
-      await removeItem(lineItemId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Unable to remove item.";
-      setLineErrors((prev) => ({ ...prev, [lineItemId]: msg }));
-    } finally {
-      setBusyLineId(null);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -129,7 +47,7 @@ export function CartDrawer() {
             <ShoppingBag size={18} className="text-zinc-800" />
             <h2 className="text-base font-bold text-zinc-900">Shopping Cart</h2>
             <span className="text-xs font-mono text-zinc-500">
-              ({items.reduce((acc, i) => acc + (i.quantity || 0), 0)})
+              ({itemCount})
             </span>
           </div>
           <button
@@ -168,9 +86,7 @@ export function CartDrawer() {
           ) : (
             <div className="divide-y divide-zinc-100">
               {items.map((item) => {
-                const isBusy = busyLineId === item.id;
-                const lineTotal = item.subtotal || item.unit_price * item.quantity;
-                const errorMsg = lineErrors[item.id];
+                const lineState = getLineItemState(item, busyLineId, lineErrors);
 
                 return (
                   <div key={item.id} className="py-4 first:pt-0 last:pb-0">
@@ -197,7 +113,7 @@ export function CartDrawer() {
                             <h4 className="text-xs font-semibold text-zinc-900 truncate">
                               {item.title}
                             </h4>
-                            {showVariantTitle(item.variant_title) && (
+                            {lineState.showVariant && (
                               <p className="text-[11px] text-zinc-500 truncate">
                                 {item.variant_title}
                               </p>
@@ -210,7 +126,7 @@ export function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(item.id)}
-                            disabled={isBusy}
+                            disabled={lineState.isBusy}
                             title="Remove item"
                             aria-label={`Remove ${item.title}`}
                             className="p-1 text-zinc-400 hover:text-rose-600 disabled:opacity-30 transition"
@@ -225,7 +141,7 @@ export function CartDrawer() {
                             <button
                               type="button"
                               onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                              disabled={isBusy || item.quantity <= 1}
+                              disabled={!lineState.canDecrease}
                               aria-label="Decrease quantity"
                               className="px-2 py-0.5 text-zinc-600 hover:text-black hover:bg-zinc-200 font-bold disabled:opacity-30 transition"
                             >
@@ -237,7 +153,7 @@ export function CartDrawer() {
                             <button
                               type="button"
                               onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                              disabled={isBusy}
+                              disabled={!lineState.canIncrease}
                               aria-label="Increase quantity"
                               className="px-2 py-0.5 text-zinc-600 hover:text-black hover:bg-zinc-200 font-bold disabled:opacity-30 transition"
                             >
@@ -246,16 +162,16 @@ export function CartDrawer() {
                           </div>
 
                           <span className="text-xs font-bold font-mono text-zinc-900">
-                            {formatPrice(lineTotal, currencyCode)}
+                            {formatPrice(lineState.lineTotal, currencyCode)}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Inline error for this line if stock or API error occurs */}
-                    {errorMsg && (
+                    {lineState.error && (
                       <p className="text-[11px] text-rose-600 mt-1.5 font-medium">
-                        {errorMsg}
+                        {lineState.error}
                       </p>
                     )}
                   </div>

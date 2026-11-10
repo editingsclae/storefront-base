@@ -1,3 +1,5 @@
+On Windows build with: npx next build --webpack (Turbopack's Tailwind loader crashes there).
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

@@ -46,7 +46,7 @@ export default async function OrderConfirmedPage({
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 py-4">
-      <ClearCartOnMount />
+      <ClearCartOnMount orderId={order.id} />
       {/* Success Hero Header */}
       <div className="border border-emerald-200 bg-emerald-50/50 rounded-2xl p-8 text-center space-y-3">
         <CheckCircle2 size={52} className="mx-auto text-emerald-600" />

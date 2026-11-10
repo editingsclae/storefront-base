@@ -3,16 +3,28 @@
 import { useEffect, useRef } from "react";
 import { useCart } from "@/context/CartContext";
 
-export function ClearCartOnMount() {
+interface ClearCartOnMountProps {
+  orderId: string;
+}
+
+export function ClearCartOnMount({ orderId }: ClearCartOnMountProps) {
   const { clearCart } = useCart();
-  const clearedRef = useRef(false);
+  const checkedRef = useRef(false);
 
   useEffect(() => {
-    if (!clearedRef.current) {
-      clearedRef.current = true;
-      clearCart();
+    if (checkedRef.current) return;
+    checkedRef.current = true;
+
+    try {
+      const lastPlaced = sessionStorage.getItem("last_placed_order_id");
+      if (lastPlaced === orderId) {
+        clearCart();
+        sessionStorage.removeItem("last_placed_order_id");
+      }
+    } catch (e) {
+      console.warn("Could not access sessionStorage in ClearCartOnMount:", e);
     }
-  }, [clearCart]);
+  }, [clearCart, orderId]);
 
   return null;
 }

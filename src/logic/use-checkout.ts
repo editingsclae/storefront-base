@@ -212,6 +212,11 @@ export function useCheckout() {
         if (!token) {
           rememberGuestOrder(orderId);
         }
+        try {
+          sessionStorage.setItem("last_placed_order_id", orderId);
+        } catch (e) {
+          console.warn("Could not save last_placed_order_id to sessionStorage:", e);
+        }
         setOrderPlaced(true);
         startTransition(() => {
           router.push(`/order/confirmed/${orderId}`);

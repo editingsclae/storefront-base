@@ -14,7 +14,12 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
   {
-    files: ["src/components/**/*.{ts,tsx}"],
+    files: [
+      "src/components/**/*.{ts,tsx}",
+      "src/app/account/**/*.{ts,tsx}",
+      "src/app/checkout/**/*.{ts,tsx}",
+      "src/app/cart/**/*.{ts,tsx}",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -23,7 +28,7 @@ const eslintConfig = defineConfig([
             {
               name: "@/lib/medusa",
               message:
-                "Files in src/components must not import from '@/lib/medusa' directly. Use '@/logic' instead.",
+                "Components and client pages must not import from '@/lib/medusa' directly. Use '@/logic' instead.",
             },
           ],
         },

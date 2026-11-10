@@ -7,7 +7,7 @@ import {
   STORE_NAME,
   getDerivedOrderStatus,
   getDerivedPaymentStatus,
-} from "@/lib/medusa";
+} from "@/logic";
 import { showVariantTitle } from "@/logic/variant-select";
 import { useOrderDetails } from "@/logic/use-order-details";
 import {

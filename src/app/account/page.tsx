@@ -7,7 +7,7 @@ import {
   formatPrice,
   STORE_NAME,
   getDerivedOrderStatus,
-} from "@/lib/medusa";
+} from "@/logic";
 import {
   Package,
   LogOut,

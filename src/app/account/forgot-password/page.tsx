@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { KeyRound, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
-import { STORE_NAME } from "@/lib/medusa";
+import { STORE_NAME } from "@/logic";
 import { CODE_LENGTH } from "@/lib/email-verification";
 import { useForgotPassword } from "@/logic/use-forgot-password";
 

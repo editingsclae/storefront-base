@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { STORE_NAME } from "@/lib/medusa";
+import { STORE_NAME } from "@/logic";
 import { Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { useLoginForm } from "@/logic/use-login-form";
 

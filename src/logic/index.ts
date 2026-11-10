@@ -14,4 +14,5 @@ export * from "./use-forgot-password";
 export * from "./use-email-verification";
 export * from "./use-account-orders";
 export * from "./use-order-details";
+export * from "./order-totals";
 export * from "./auth-401";

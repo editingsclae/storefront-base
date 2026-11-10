@@ -14,6 +14,7 @@ The codebase is strictly separated into two decoupled layers:
   - Contains **NO JSX**, **NO Tailwind classes**, and **NO HTML markup**.
   - All customer hooks return plain data objects and event handlers.
   - Pure functions in `src/logic/` and `src/lib/` are fully testable without network access.
+  - Files with "use client" in `src/logic` may export hooks only; pure functions go in their own file without "use client" so server pages can call them.
   - **Never touch this layer when restyling or redesigning the storefront**.
 
 ### The Design Layer (`src/components/` and `src/app/`)

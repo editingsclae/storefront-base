@@ -3,15 +3,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { LayoutGrid } from "lucide-react";
 import { CategoryTile, cleanCategoryHandle } from "@/logic";
+import { CATEGORY_TILE_PLACES } from "@/lib/declare-layout";
 
 interface CategoryTilesProps {
   tiles: CategoryTile[];
 }
 
-// Up to 8 categories with a round picture, chosen by the merchant in the
+// Up to CATEGORY_TILE_PLACES (8) categories with a round picture, chosen by the merchant in the
 // portal. Nothing shows when there are none: the home page then falls back to
 // its simple list of categories.
-export function CategoryTiles({ tiles }: CategoryTilesProps) {
+export function CategoryTiles({ tiles: allTiles }: CategoryTilesProps) {
+  const tiles = allTiles.slice(0, CATEGORY_TILE_PLACES);
   if (tiles.length === 0) return null;
 
   return (

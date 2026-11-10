@@ -23,6 +23,10 @@ export const SECTIONS: SectionPlace[] = [
 
 export const LAYOUT = { promo_banners: 2, sections: SECTIONS };
 
+// The maximum number of category tiles this storefront's home page draws.
+// This number must match what the page draws (see CategoryTiles).
+export const CATEGORY_TILE_PLACES = 8;
+
 // The sections the backend sent, cut to what this page has: only the sections it
 // declared, in its own order, each with at most its declared number of products.
 export function visibleSections<T extends { key: string; product_ids: string[] }>(

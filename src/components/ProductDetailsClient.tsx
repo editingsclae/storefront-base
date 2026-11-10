@@ -1,65 +1,37 @@
 "use client";
 
-import React, { useState } from "react";
-import { Product, ProductVariant, formatPrice } from "@/lib/medusa";
-import { useCart } from "@/context/CartContext";
+import React from "react";
+import type { Product, ProductVariant } from "@/logic";
+import { formatPrice, useVariantSelect } from "@/logic";
 import { ShoppingBag, AlertCircle } from "lucide-react";
-import {
-  choose,
-  findVariant,
-  initialSelection,
-  optionGroups,
-  valueState,
-  type Selection,
-} from "@/lib/variant-select";
 
 interface ProductDetailsClientProps {
   product: Product;
 }
 
 export function ProductDetailsClient({ product }: ProductDetailsClientProps) {
-  const { addToCart, isLoading: cartLoading } = useCart();
-  const variants = product.variants || [];
-
-  // One row of buttons per option (Size, Color...). Products whose variants have
-  // no options to choose from keep the plain list of variants below.
-  const groups = optionGroups(product);
-  const [selection, setSelection] = useState<Selection>(() =>
-    initialSelection(product, optionGroups(product))
-  );
-  const [selectedVariantId, setSelectedVariantId] = useState<string>(
-    variants[0]?.id || ""
-  );
-  const [quantity, setQuantity] = useState<number>(1);
-  const [isAdding, setIsAdding] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const selectedVariant =
-    groups.length > 0
-      ? findVariant(product, groups, selection) || variants[0]
-      : variants.find((v) => v.id === selectedVariantId) || variants[0];
-
-  const price = selectedVariant?.calculated_price;
-  const inventory = selectedVariant?.inventory_quantity;
-  const isOutOfStock = inventory !== undefined && inventory <= 0;
-
-  const handleAddToCart = async () => {
-    if (!selectedVariant) return;
-    setIsAdding(true);
-    setErrorMessage(null);
-
-    try {
-      await addToCart(selectedVariant.id, quantity);
-    } catch (err: unknown) {
-      console.error("Failed to add to cart:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      setErrorMessage(
-        msg || "Failed to add product to cart. Please try again."
-      );
-    } finally {
-      setIsAdding(false);
-    }
-  };
+  const {
+    groups,
+    selection,
+    variants,
+    selectedVariantId,
+    price,
+    inventory,
+    isOutOfStock,
+    quantity,
+    incrementQuantity,
+    decrementQuantity,
+    canIncrement,
+    canDecrement,
+    getValueState,
+    isValueDisabled,
+    chooseOption,
+    selectVariant,
+    handleAddToCart,
+    isAdding,
+    cartLoading,
+    errorMessage,
+  } = useVariantSelect(product);
 
   return (
     <div className="space-y-6">
@@ -105,19 +77,16 @@ export function ProductDetailsClient({ product }: ProductDetailsClientProps) {
           </p>
           <div className="flex flex-wrap gap-2">
             {group.values.map((value) => {
-              const state = valueState(product, groups, selection, group.id, value);
+              const state = getValueState(group.id, value);
               const isSelected = selection[group.id] === value;
               return (
                 <button
                   key={value}
                   type="button"
                   aria-pressed={isSelected}
-                  disabled={state === "gone"}
+                  disabled={isValueDisabled(group.id, value)}
                   title={state === "available" ? undefined : "Not available with your other choices"}
-                  onClick={() => {
-                    setSelection(choose(product, groups, selection, group.id, value));
-                    setQuantity(1);
-                  }}
+                  onClick={() => chooseOption(group.id, value)}
                   className={`min-w-11 px-4 py-2 border rounded-md text-sm transition ${
                     isSelected
                       ? "border-black bg-zinc-900 text-white font-semibold"
@@ -152,10 +121,7 @@ export function ProductDetailsClient({ product }: ProductDetailsClientProps) {
                 <button
                   key={v.id}
                   type="button"
-                  onClick={() => {
-                    setSelectedVariantId(v.id);
-                    setQuantity(1);
-                  }}
+                  onClick={() => selectVariant(v.id)}
                   disabled={vOutOfStock}
                   className={`p-3 text-left border rounded-lg transition text-xs flex flex-col justify-between ${
                     isSelected
@@ -186,8 +152,8 @@ export function ProductDetailsClient({ product }: ProductDetailsClientProps) {
           <div className="flex items-center border border-zinc-300 rounded-md bg-white">
             <button
               type="button"
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              disabled={quantity <= 1 || isOutOfStock}
+              onClick={decrementQuantity}
+              disabled={!canDecrement}
               className="px-3 py-2 text-zinc-600 hover:text-black disabled:opacity-30 transition font-bold"
             >
               -
@@ -197,17 +163,8 @@ export function ProductDetailsClient({ product }: ProductDetailsClientProps) {
             </span>
             <button
               type="button"
-              onClick={() =>
-                setQuantity(
-                  inventory !== undefined
-                    ? Math.min(inventory, quantity + 1)
-                    : quantity + 1
-                )
-              }
-              disabled={
-                isOutOfStock ||
-                (inventory !== undefined && quantity >= inventory)
-              }
+              onClick={incrementQuantity}
+              disabled={!canIncrement}
               className="px-3 py-2 text-zinc-600 hover:text-black disabled:opacity-30 transition font-bold"
             >
               +

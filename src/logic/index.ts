@@ -1,5 +1,8 @@
 export * from "./shop-filters";
 export * from "./use-shop-filters";
+export * from "./variant-select";
+export * from "./product-card";
+export * from "./use-variant-select";
 
 // Types and pure formatting utilities from medusa
 export type {

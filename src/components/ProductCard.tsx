@@ -3,9 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Product, formatPrice } from "@/lib/medusa";
-import { priceRange } from "@/lib/variant-select";
-import { productBadge } from "@/lib/product-badge";
+import type { Product } from "@/logic";
+import { formatPrice, getCardState } from "@/logic";
 import { useCart } from "@/context/CartContext";
 import { Package, ShoppingBag, ArrowRight, Loader2 } from "lucide-react";
 
@@ -17,54 +16,16 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
 
-  const variants = product.variants || [];
-  const primaryVariant = variants[0];
-  const price = primaryVariant?.calculated_price;
-  // Variants that do not all cost the same: "From" the lowest price
-  const range = priceRange(variants);
-  const hasRange = !!range && range.low !== range.high;
-
-  // Calculate stock across variants
-  let hasUnmanagedStock = false;
-  let totalStock = 0;
-  for (const v of variants) {
-    if (v.inventory_quantity === undefined || v.inventory_quantity === null) {
-      hasUnmanagedStock = true;
-    } else {
-      totalStock += v.inventory_quantity;
-    }
-  }
-
-  // Stock badge rules:
-  // "Out of stock" when 0, "Only N left" when 1 to 5, nothing otherwise.
-  let stockBadge: React.ReactNode = null;
-  if (!hasUnmanagedStock) {
-    if (totalStock === 0) {
-      stockBadge = (
-        <span className="bg-rose-50 text-rose-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-rose-200">
-          Out of stock
-        </span>
-      );
-    } else if (totalStock >= 1 && totalStock <= 5) {
-      stockBadge = (
-        <span className="bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-amber-200">
-          Only {totalStock} left
-        </span>
-      );
-    }
-  }
-
-  // Determine button state:
-  // "If the product has exactly one variant and it is in stock, the button reads "Add to cart" and adds it (the drawer opens). Otherwise it reads "Choose options" and links to the product page."
-  const hasSingleVariant = variants.length === 1;
-  const singleVariant = variants[0];
-  const isSingleVariantInStock =
-    hasSingleVariant &&
-    (singleVariant.inventory_quantity === undefined ||
-      singleVariant.inventory_quantity === null ||
-      singleVariant.inventory_quantity > 0);
-
-  const canQuickAdd = hasSingleVariant && isSingleVariantInStock;
+  const {
+    singleVariant,
+    canQuickAdd,
+    price,
+    range,
+    hasRange,
+    stockBadge,
+    imageUrl,
+    badge,
+  } = getCardState(product);
 
   const handleQuickAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -78,10 +39,6 @@ export function ProductCard({ product }: ProductCardProps) {
       setIsAdding(false);
     }
   };
-
-  const imageUrl = product.thumbnail || product.images?.[0]?.url;
-  // The badge the merchant chose for this product (empty: none)
-  const badge = productBadge(product);
 
   return (
     <div className="group border border-zinc-200 rounded-lg overflow-hidden bg-white hover:border-zinc-300 hover:shadow-sm transition flex flex-col justify-between">
@@ -119,7 +76,18 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* Stock Badge */}
           {stockBadge && (
-            <div className="absolute top-2 right-2">{stockBadge}</div>
+            <div className="absolute top-2 right-2">
+              {stockBadge.type === "out_of_stock" && (
+                <span className="bg-rose-50 text-rose-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-rose-200">
+                  {stockBadge.label}
+                </span>
+              )}
+              {stockBadge.type === "low_stock" && (
+                <span className="bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-amber-200">
+                  {stockBadge.label}
+                </span>
+              )}
+            </div>
           )}
         </Link>
 

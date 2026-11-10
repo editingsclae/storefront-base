@@ -5,12 +5,6 @@ export function isUnauthorizedError(err: unknown): boolean {
       return true;
     }
   }
-  if (err instanceof Error) {
-    const msg = err.message.toLowerCase();
-    if (msg.includes("401") || msg.includes("unauthorized")) {
-      return true;
-    }
-  }
   return false;
 }
 

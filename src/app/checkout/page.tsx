@@ -1,22 +1,7 @@
 "use client";
 
-import { showVariantTitle } from "@/lib/variant-select";
-import React, { useState, useEffect, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
-import {
-  formatPrice,
-  getShippingOptions,
-  addShippingMethod,
-  updateCart,
-  createPaymentCollection,
-  createPaymentSession,
-  completeCart,
-  linkCartToCustomer,
-  ShippingOption,
-  Address,
-} from "@/lib/medusa";
+import React from "react";
+import Link from "next/link";
 import {
   CheckCircle,
   Truck,
@@ -25,229 +10,35 @@ import {
   Lock,
   ArrowLeft,
 } from "lucide-react";
-import Link from "next/link";
-import { rememberGuestOrder } from "@/lib/guest-orders";
+import { formatPrice } from "@/lib/medusa";
+import { showVariantTitle } from "@/logic/variant-select";
+import { useCheckout } from "@/logic/use-checkout";
 
 export default function CheckoutPage() {
-  const router = useRouter();
-  const { cart, refreshCart, clearCart, isLoading: cartLoading } = useCart();
-  const { customer, token } = useAuth();
-  const [, startTransition] = useTransition();
-
-  // Form states
-  const [email, setEmail] = useState("");
-  const [address, setAddress] = useState<Address>({
-    first_name: "",
-    last_name: "",
-    address_1: "",
-    address_2: "",
-    city: "Tunis",
-    country_code: "tn",
-    postal_code: "1000",
-    phone: "",
-  });
-
-  // Flow states
-  const [step, setStep] = useState<"address" | "shipping" | "payment">("address");
-  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
-  const [selectedShippingOptionId, setSelectedShippingOptionId] = useState<string>("");
-  const [shippingLoading, setShippingLoading] = useState(false);
-  const [submittingOrder, setSubmittingOrder] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  // Autofill customer data if logged in
-  useEffect(() => {
-    if (!customer) return;
-    const timer = setTimeout(() => {
-      setEmail((prev) => prev || customer.email || "");
-      setAddress((prev) => ({
-        ...prev,
-        first_name: prev.first_name || customer.first_name || "",
-        last_name: prev.last_name || customer.last_name || "",
-        phone: prev.phone || customer.phone || "",
-      }));
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [customer]);
-
-  const currencyCode = cart?.currency_code || "TND";
-  const items = cart?.items || [];
-
-  // Validation function
-  const validateAddress = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!email.trim()) {
-      errors.email = "Email address is required.";
-    }
-
-    if (!address.first_name.trim()) {
-      errors.first_name = "First name is required.";
-    }
-
-    if (!address.last_name.trim()) {
-      errors.last_name = "Last name is required.";
-    }
-
-    if (!address.address_1.trim()) {
-      errors.address_1 = "Address is required.";
-    }
-
-    // City is required
-    if (!address.city || !address.city.trim()) {
-      errors.city = "City is required.";
-    }
-
-    // Phone is required: at least 8 digits, allow +216 prefix, spaces ignored
-    const rawPhone = address.phone || "";
-    const cleanPhone = rawPhone.replace(/[\s\-()]/g, "");
-    const phonePattern = /^(\+?216)?[0-9]{8,}$/;
-    if (!rawPhone.trim()) {
-      errors.phone = "Phone number is required.";
-    } else if (!phonePattern.test(cleanPhone)) {
-      errors.phone = "Phone number must have at least 8 digits (e.g. 12 345 678 or +216 12 345 678).";
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Step 1: Save Address and Load Shipping Options
-  const handleSaveAddress = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cart) return;
-
-    if (!validateAddress()) {
-      return; // Do NOT call the API until valid
-    }
-
-    setErrorMessage(null);
-    setShippingLoading(true);
-
-    try {
-      // 1. Update cart with email and address
-      await updateCart(
-        cart.id,
-        {
-          email,
-          shipping_address: address,
-          billing_address: address,
-        },
-        token || undefined
-      );
-
-      // 2. Fetch shipping options
-      const options = await getShippingOptions(cart.id);
-      setShippingOptions(options);
-
-      if (options.length > 0) {
-        setSelectedShippingOptionId(options[0].id);
-      }
-      await refreshCart();
-      setStep("shipping");
-    } catch (err: unknown) {
-      console.error("Address save error:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      setErrorMessage(
-        msg || "Failed to update shipping address. Please check your details."
-      );
-    } finally {
-      setShippingLoading(false);
-    }
-  };
-
-  // Step 2: Confirm Shipping Method
-  const handleConfirmShipping = async () => {
-    if (!cart || !selectedShippingOptionId) return;
-    setErrorMessage(null);
-    setShippingLoading(true);
-
-    try {
-      await addShippingMethod(
-        cart.id,
-        selectedShippingOptionId,
-        token || undefined
-      );
-      await refreshCart();
-      setStep("payment");
-    } catch (err: unknown) {
-      console.error("Shipping method error:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes("shipping profile")) {
-        setErrorMessage(
-          "The cart items require shipping profiles that are not satisfied by the merchant. Please contact store support."
-        );
-      } else {
-        setErrorMessage(msg || "Failed to add shipping method.");
-      }
-    } finally {
-      setShippingLoading(false);
-    }
-  };
-
-  // Step 3: Complete Order
-  const handlePlaceOrder = async () => {
-    if (!cart) return;
-    setErrorMessage(null);
-    setSubmittingOrder(true);
-
-    try {
-      // If customer token exists and cart has no customer_id, link cart to customer, then refresh cart
-      if (token && cart && !cart.customer_id) {
-        try {
-          await linkCartToCustomer(cart.id, token);
-          await refreshCart();
-        } catch (linkErr) {
-          console.warn("Pre-order cart link warning:", linkErr);
-        }
-      }
-
-      // 1. Create payment collection
-      const paymentCollection = await createPaymentCollection(
-        cart.id,
-        token || undefined
-      );
-
-      // 2. Create payment session (verified provider: pp_system_default)
-      await createPaymentSession(
-        paymentCollection.id,
-        "pp_system_default",
-        token || undefined
-      );
-
-      // 3. Complete cart
-      const result = await completeCart(cart.id, token || undefined);
-
-      if (result.type === "order" && result.order) {
-        const orderId = result.order.id;
-        // A guest can claim this order later, when they log in or register
-        if (!token) {
-          rememberGuestOrder(orderId);
-        }
-        clearCart();
-        startTransition(() => {
-          router.push(`/order/confirmed/${orderId}`);
-        });
-      } else {
-        throw new Error("Cart completion did not return an order.");
-      }
-    } catch (err: unknown) {
-      console.error("Place order failed:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes("shipping profile")) {
-        setErrorMessage(
-          "The cart items require shipping profiles that are not satisfied by the merchant. Please contact store support."
-        );
-      } else {
-        setErrorMessage(
-          msg || "An unexpected error occurred while placing your order."
-        );
-      }
-    } finally {
-      setSubmittingOrder(false);
-    }
-  };
+  const {
+    cart,
+    cartLoading,
+    items,
+    totals,
+    currencyCode,
+    customer,
+    email,
+    updateEmail,
+    address,
+    updateAddressField,
+    step,
+    setStep,
+    shippingOptions,
+    selectedShippingOptionId,
+    setSelectedShippingOptionId,
+    shippingLoading,
+    submittingOrder,
+    errorMessage,
+    fieldErrors,
+    handleSaveAddress,
+    handleConfirmShipping,
+    handlePlaceOrder,
+  } = useCheckout();
 
   if (cartLoading && !cart) {
     return (
@@ -342,16 +133,7 @@ export default function CheckoutPage() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (fieldErrors.email) {
-                        setFieldErrors((prev) => {
-                          const n = { ...prev };
-                          delete n.email;
-                          return n;
-                        });
-                      }
-                    }}
+                    onChange={(e) => updateEmail(e.target.value)}
                     placeholder="shopper@example.com"
                     className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 ${
                       fieldErrors.email
@@ -380,16 +162,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       value={address.first_name}
-                      onChange={(e) => {
-                        setAddress({ ...address, first_name: e.target.value });
-                        if (fieldErrors.first_name) {
-                          setFieldErrors((prev) => {
-                            const n = { ...prev };
-                            delete n.first_name;
-                            return n;
-                          });
-                        }
-                      }}
+                      onChange={(e) => updateAddressField("first_name", e.target.value)}
                       className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 ${
                         fieldErrors.first_name
                           ? "border-rose-500 focus:ring-rose-500"
@@ -407,16 +180,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       value={address.last_name}
-                      onChange={(e) => {
-                        setAddress({ ...address, last_name: e.target.value });
-                        if (fieldErrors.last_name) {
-                          setFieldErrors((prev) => {
-                            const n = { ...prev };
-                            delete n.last_name;
-                            return n;
-                          });
-                        }
-                      }}
+                      onChange={(e) => updateAddressField("last_name", e.target.value)}
                       className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 ${
                         fieldErrors.last_name
                           ? "border-rose-500 focus:ring-rose-500"
@@ -436,16 +200,7 @@ export default function CheckoutPage() {
                   <input
                     type="text"
                     value={address.address_1}
-                    onChange={(e) => {
-                      setAddress({ ...address, address_1: e.target.value });
-                      if (fieldErrors.address_1) {
-                        setFieldErrors((prev) => {
-                          const n = { ...prev };
-                          delete n.address_1;
-                          return n;
-                        });
-                      }
-                    }}
+                    onChange={(e) => updateAddressField("address_1", e.target.value)}
                     placeholder="Street name, apartment, building"
                     className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 ${
                       fieldErrors.address_1
@@ -466,16 +221,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       value={address.city}
-                      onChange={(e) => {
-                        setAddress({ ...address, city: e.target.value });
-                        if (fieldErrors.city) {
-                          setFieldErrors((prev) => {
-                            const n = { ...prev };
-                            delete n.city;
-                            return n;
-                          });
-                        }
-                      }}
+                      onChange={(e) => updateAddressField("city", e.target.value)}
                       placeholder="e.g. Tunis"
                       className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 ${
                         fieldErrors.city
@@ -494,9 +240,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       value={address.postal_code}
-                      onChange={(e) =>
-                        setAddress({ ...address, postal_code: e.target.value })
-                      }
+                      onChange={(e) => updateAddressField("postal_code", e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-zinc-300 rounded-md focus:outline-none focus:ring-1 focus:ring-zinc-900"
                     />
                   </div>
@@ -520,16 +264,7 @@ export default function CheckoutPage() {
                   <input
                     type="tel"
                     value={address.phone}
-                    onChange={(e) => {
-                      setAddress({ ...address, phone: e.target.value });
-                      if (fieldErrors.phone) {
-                        setFieldErrors((prev) => {
-                          const n = { ...prev };
-                          delete n.phone;
-                          return n;
-                        });
-                      }
-                    }}
+                    onChange={(e) => updateAddressField("phone", e.target.value)}
                     placeholder="+216 12 345 678"
                     className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 ${
                       fieldErrors.phone
@@ -736,21 +471,15 @@ export default function CheckoutPage() {
             <div className="flex justify-between text-zinc-600">
               <span>Items</span>
               <span className="font-mono font-semibold text-zinc-900">
-                {formatPrice(
-                  cart.item_subtotal ??
-                    (cart.shipping_subtotal
-                      ? cart.subtotal - cart.shipping_subtotal
-                      : cart.subtotal),
-                  currencyCode
-                )}
+                {formatPrice(totals.itemsSubtotal, currencyCode)}
               </span>
             </div>
 
             <div className="flex justify-between text-zinc-600">
               <span>Shipping</span>
               <span className="font-mono text-zinc-900">
-                {cart.shipping_subtotal !== undefined && cart.shipping_subtotal > 0 ? (
-                  formatPrice(cart.shipping_subtotal, currencyCode)
+                {totals.hasShippingSubtotal ? (
+                  formatPrice(totals.shippingSubtotal!, currencyCode)
                 ) : (
                   <span className="text-zinc-500 italic font-sans font-normal">
                     Calculated next
@@ -759,11 +488,11 @@ export default function CheckoutPage() {
               </span>
             </div>
 
-            {cart.tax_total !== undefined && cart.tax_total > 0 && (
+            {totals.hasTaxTotal && (
               <div className="flex justify-between text-zinc-600">
                 <span>VAT</span>
                 <span className="font-mono text-zinc-900">
-                  {formatPrice(cart.tax_total, currencyCode)}
+                  {formatPrice(totals.taxTotal!, currencyCode)}
                 </span>
               </div>
             )}
@@ -771,7 +500,7 @@ export default function CheckoutPage() {
             <div className="pt-3 border-t border-zinc-200 flex justify-between text-base font-extrabold text-zinc-900">
               <span>Total</span>
               <span className="font-mono">
-                {formatPrice(cart.total || cart.subtotal, currencyCode)}
+                {formatPrice(totals.total, currencyCode)}
               </span>
             </div>
           </div>

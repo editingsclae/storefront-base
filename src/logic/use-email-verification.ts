@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import {
   confirmEmailVerification,
   getEmailVerification,
@@ -14,6 +16,7 @@ import {
   isCodeComplete,
   resendLabel,
 } from "@/lib/email-verification";
+import { isUnauthorizedError } from "./auth-401";
 
 export interface UseEmailVerificationCardOptions {
   email: string;
@@ -24,7 +27,9 @@ export function useEmailVerificationCard({
   email,
   onVerified,
 }: UseEmailVerificationCardOptions) {
-  const { token, markEmailVerified } = useAuth();
+  const router = useRouter();
+  const { token, markEmailVerified, logout } = useAuth();
+  const { clearCart } = useCart();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<"send" | "confirm" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +48,17 @@ export function useEmailVerificationCard({
         setWait(status.can_resend_in);
         setCodeSent(status.code_pending);
       })
-      .catch(() => {
-        // The buttons still work; the backend answers with the real limits
+      .catch((err) => {
+        if (isUnauthorizedError(err)) {
+          clearCart();
+          logout();
+          router.push("/account/login");
+        }
       });
     return () => {
       current = false;
     };
-  }, [token]);
+  }, [token, clearCart, logout, router]);
 
   // Counts the pause down, one second at a time
   useEffect(() => {
@@ -75,13 +84,19 @@ export function useEmailVerificationCard({
       setNotice(`We sent a code to ${email}.`);
       inputRef.current?.focus();
     } catch (err) {
+      if (isUnauthorizedError(err)) {
+        clearCart();
+        logout();
+        router.push("/account/login");
+        return;
+      }
       const problem = describeVerificationError(err);
       setError(problem.message);
       if (problem.retryAfter) setWait(Math.ceil(problem.retryAfter));
     } finally {
       setBusy(null);
     }
-  }, [token, busy, email, markEmailVerified, onVerified]);
+  }, [token, busy, email, markEmailVerified, onVerified, logout, clearCart, router]);
 
   const confirm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +113,12 @@ export function useEmailVerificationCard({
       await markEmailVerified();
       onVerified?.();
     } catch (err) {
+      if (isUnauthorizedError(err)) {
+        clearCart();
+        logout();
+        router.push("/account/login");
+        return;
+      }
       const problem = describeVerificationError(err);
       setError(problem.message);
       if (problem.clearCode) setCode("");

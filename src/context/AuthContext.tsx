@@ -11,6 +11,7 @@ import {
   sendEmailVerification,
 } from "@/lib/medusa";
 import { forgetGuestOrders, getGuestOrderIds } from "@/lib/guest-orders";
+import { isUnauthorizedError } from "@/logic";
 
 interface AuthContextType {
   customer: Customer | null;
@@ -98,8 +99,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setToken(null);
             }
           }
-        } catch {
-          if (isMounted) setCustomer(null);
+        } catch (err) {
+          if (isMounted) {
+            setCustomer(null);
+            if (isUnauthorizedError(err)) {
+              localStorage.removeItem(TOKEN_KEY);
+              document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
+              localStorage.removeItem(CART_KEY);
+              document.cookie = `${CART_KEY}=; path=/; max-age=0`;
+              setToken(null);
+            }
+          }
         }
       }
       if (isMounted) setIsLoading(false);
@@ -166,8 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const cust = await getCustomer(token);
       setCustomer(cust);
-    } catch {
-      // ignore
+    } catch (err) {
+      if (isUnauthorizedError(err)) {
+        logout();
+      }
     }
   };
 

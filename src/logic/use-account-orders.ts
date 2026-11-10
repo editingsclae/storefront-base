@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { getCustomerOrders, Order } from "@/lib/medusa";
+import { isUnauthorizedError } from "./auth-401";
 
 export function useAccountOrders() {
   const router = useRouter();
@@ -35,6 +36,11 @@ export function useAccountOrders() {
       })
       .catch((err) => {
         console.error("Failed to load customer orders:", err);
+        if (isUnauthorizedError(err)) {
+          clearCart();
+          logout();
+          router.push("/account/login");
+        }
       })
       .finally(() => {
         if (isCurrent) setOrdersLoading(false);
@@ -43,7 +49,7 @@ export function useAccountOrders() {
     return () => {
       isCurrent = false;
     };
-  }, [token, ordersVersion]);
+  }, [token, ordersVersion, clearCart, logout, router]);
 
   const reloadOrders = useCallback(() => {
     setOrdersLoading(true);

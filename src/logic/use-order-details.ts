@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { getOrder, Order } from "@/lib/medusa";
+import { isUnauthorizedError } from "./auth-401";
 
 export interface OrderTotals {
   currency: string;
@@ -38,7 +40,8 @@ export function getOrderTotals(order: Order | null): OrderTotals {
 
 export function useOrderDetails(id: string) {
   const router = useRouter();
-  const { customer, token, isLoading: authLoading } = useAuth();
+  const { customer, token, logout, isLoading: authLoading } = useAuth();
+  const { clearCart } = useCart();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,12 @@ export function useOrderDetails(id: string) {
       .catch((err: unknown) => {
         if (!isCurrent) return;
         console.error("Order load error:", err);
+        if (isUnauthorizedError(err)) {
+          clearCart();
+          logout();
+          router.push("/account/login");
+          return;
+        }
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg || "Failed to load order details from backend.");
       })
@@ -75,7 +84,7 @@ export function useOrderDetails(id: string) {
     return () => {
       isCurrent = false;
     };
-  }, [token, id]);
+  }, [token, id, clearCart, logout, router]);
 
   const items = order?.items || [];
   const totals = getOrderTotals(order);

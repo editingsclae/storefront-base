@@ -20,7 +20,7 @@ export default async function RootLayout({
   const categories = await getCategories();
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-white text-zinc-900 antialiased">
         <ClientProviders>
           <Header categories={categories} />

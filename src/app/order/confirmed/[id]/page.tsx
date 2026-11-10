@@ -1,5 +1,5 @@
 import React from "react";
-import { showVariantTitle } from "@/logic";
+import { showVariantTitle, getOrderTotals } from "@/logic";
 import Link from "next/link";
 import {
   getOrder,
@@ -41,7 +41,8 @@ export default async function OrderConfirmedPage({
   }
 
   const items = order.items || [];
-  const currencyCode = order.currency_code || "TND";
+  const totals = getOrderTotals(order);
+  const currencyCode = totals.currency;
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 py-4">
@@ -152,36 +153,38 @@ export default async function OrderConfirmedPage({
 
           {/* Total Breakdown */}
           <div className="pt-4 border-t border-zinc-200 space-y-2 text-xs">
-            <div className="flex justify-between text-zinc-600">
-              <span>Items</span>
-              <span className="font-mono">
-                {formatPrice(
-                  order.item_subtotal ??
-                    (order.shipping_subtotal
-                      ? order.subtotal - order.shipping_subtotal
-                      : order.subtotal),
-                  currencyCode
-                )}
-              </span>
-            </div>
-            <div className="flex justify-between text-zinc-600">
-              <span>Shipping</span>
-              <span className="font-mono">
-                {formatPrice(order.shipping_subtotal ?? 0, currencyCode)}
-              </span>
-            </div>
-            {order.tax_total !== undefined && order.tax_total > 0 && (
+            {totals.itemsSubtotal !== undefined && (
               <div className="flex justify-between text-zinc-600">
-                <span>VAT</span>
+                <span>Items</span>
                 <span className="font-mono">
-                  {formatPrice(order.tax_total, currencyCode)}
+                  {formatPrice(totals.itemsSubtotal, currencyCode)}
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-base font-extrabold text-zinc-900 pt-2 border-t border-zinc-200">
-              <span>Total</span>
-              <span className="font-mono">{formatPrice(order.total, currencyCode)}</span>
-            </div>
+            {totals.shippingSubtotal !== undefined && (
+              <div className="flex justify-between text-zinc-600">
+                <span>Shipping</span>
+                <span className="font-mono">
+                  {totals.isShippingFree
+                    ? "Free"
+                    : formatPrice(totals.shippingSubtotal, currencyCode)}
+                </span>
+              </div>
+            )}
+            {totals.hasTaxTotal && (
+              <div className="flex justify-between text-zinc-600">
+                <span>VAT</span>
+                <span className="font-mono">
+                  {formatPrice(totals.taxTotal!, currencyCode)}
+                </span>
+              </div>
+            )}
+            {totals.total !== undefined && (
+              <div className="flex justify-between text-base font-extrabold text-zinc-900 pt-2 border-t border-zinc-200">
+                <span>Total</span>
+                <span className="font-mono">{formatPrice(totals.total, currencyCode)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

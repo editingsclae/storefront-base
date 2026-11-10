@@ -165,18 +165,24 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
           {/* Totals Breakdown */}
           <div className="pt-4 border-t border-zinc-200 space-y-2 text-xs">
-            <div className="flex justify-between text-zinc-600">
-              <span>Items</span>
-              <span className="font-mono">
-                {formatPrice(totals.itemsSubtotal, currency)}
-              </span>
-            </div>
-            <div className="flex justify-between text-zinc-600">
-              <span>Shipping</span>
-              <span className="font-mono">
-                {formatPrice(totals.shippingSubtotal, currency)}
-              </span>
-            </div>
+            {totals.itemsSubtotal !== undefined && (
+              <div className="flex justify-between text-zinc-600">
+                <span>Items</span>
+                <span className="font-mono">
+                  {formatPrice(totals.itemsSubtotal, currency)}
+                </span>
+              </div>
+            )}
+            {totals.shippingSubtotal !== undefined && (
+              <div className="flex justify-between text-zinc-600">
+                <span>Shipping</span>
+                <span className="font-mono">
+                  {totals.isShippingFree
+                    ? "Free"
+                    : formatPrice(totals.shippingSubtotal, currency)}
+                </span>
+              </div>
+            )}
             {totals.hasTaxTotal && (
               <div className="flex justify-between text-zinc-600">
                 <span>VAT</span>
@@ -185,10 +191,12 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-base font-extrabold text-zinc-900 pt-2 border-t border-zinc-200">
-              <span>Total</span>
-              <span className="font-mono">{formatPrice(totals.total, currency)}</span>
-            </div>
+            {totals.total !== undefined && (
+              <div className="flex justify-between text-base font-extrabold text-zinc-900 pt-2 border-t border-zinc-200">
+                <span>Total</span>
+                <span className="font-mono">{formatPrice(totals.total, currency)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

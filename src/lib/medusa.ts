@@ -1071,13 +1071,16 @@ export async function completeCart(
 // -------------------------------------------------------------
 // Orders
 // -------------------------------------------------------------
+const ORDER_FIELDS =
+  "*items,*shipping_address,*shipping_methods,+email,+item_subtotal,+shipping_subtotal,+tax_total,+total,+fulfillment_status,+payment_status";
+
 export async function getOrder(
   orderId: string,
   token?: string
 ): Promise<Order | null> {
   try {
     const data = await medusaFetch<{ order: Order }>(
-      `/store/orders/${orderId}`,
+      `/store/orders/${orderId}?fields=${ORDER_FIELDS}`,
       {
         token,
         cache: "no-store",

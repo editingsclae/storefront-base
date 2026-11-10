@@ -45,6 +45,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { token } = useAuth();
 
+  const tokenRef = useRef(token);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+
   const openCart = useCallback(() => setIsCartOpen(true), []);
   const closeCart = useCallback(() => setIsCartOpen(false), []);
 
@@ -64,10 +69,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const ensureCart = useCallback(async (): Promise<Cart> => {
+    const requestToken = token;
     const savedId = getSavedCartId();
     if (savedId) {
       try {
-        const existing = await getCart(savedId, token || undefined);
+        const existing = await getCart(savedId, requestToken || undefined);
+        if (tokenRef.current !== requestToken) {
+          if (existing && !existing.items) existing.items = [];
+          return existing || (await createCart(tokenRef.current || undefined));
+        }
         if (existing && !existing.items) {
           existing.items = [];
         }
@@ -80,18 +90,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    if (tokenRef.current !== requestToken) {
+      return await createCart(tokenRef.current || undefined);
+    }
+
     // Recreate fresh cart
-    const fresh = await createCart(token || undefined);
+    const fresh = await createCart(tokenRef.current || undefined);
+    if (tokenRef.current !== requestToken) return fresh;
     setCartId(fresh.id);
     setCart(fresh);
     return fresh;
   }, [token]);
 
   const refreshCart = useCallback(async (): Promise<Cart | null> => {
+    const requestToken = token;
     const savedId = getSavedCartId();
     if (!savedId) return null;
     try {
-      const refreshed = await getCart(savedId, token || undefined);
+      const refreshed = await getCart(savedId, requestToken || undefined);
+      if (tokenRef.current !== requestToken) return null;
       if (refreshed) {
         setCart(refreshed);
         return refreshed;
@@ -101,6 +118,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     } catch {
+      if (tokenRef.current !== requestToken) return null;
       setCartId(null);
       setCart(null);
       return null;
@@ -109,28 +127,41 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Load cart on initial mount
   useEffect(() => {
+    let isCurrent = true;
+    const requestToken = token;
     const init = async () => {
       setIsLoading(true);
       try {
         const savedId = getSavedCartId();
         if (savedId) {
-          const loaded = await getCart(savedId, token || undefined);
+          const loaded = await getCart(savedId, requestToken || undefined);
+          if (!isCurrent) return;
+          if (tokenRef.current !== requestToken) return;
           if (loaded) {
             setCart(loaded);
           } else {
             setCartId(null);
             setCart(null);
           }
+        } else {
+          if (!isCurrent) return;
+          setCart(null);
         }
       } catch (err) {
+        if (!isCurrent) return;
         console.warn("Failed to load initial cart:", err);
         setCartId(null);
         setCart(null);
       } finally {
-        setIsLoading(false);
+        if (isCurrent) {
+          setIsLoading(false);
+        }
       }
     };
     init();
+    return () => {
+      isCurrent = false;
+    };
   }, [token]);
 
   // Clear cart in state and storage if token was cleared (logout)
@@ -147,11 +178,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token || !cart?.id || cart.customer_id) return;
     let isCurrent = true;
-    linkCartToCustomer(cart.id, token)
+    const requestToken = token;
+    linkCartToCustomer(cart.id, requestToken)
       .then((linked) => {
-        if (isCurrent) setCart(linked);
+        if (!isCurrent) return;
+        if (tokenRef.current !== requestToken) return;
+        setCart(linked);
       })
       .catch((err) => {
+        if (!isCurrent) return;
         console.warn("Failed to auto-link cart to customer:", err);
       });
     return () => {
@@ -233,6 +268,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (targetCart && !targetCart.customer_id) {
         try {
           const linked = await linkCartToCustomer(targetCart.id, activeToken);
+          if (tokenRef.current !== activeToken) return cart;
           setCart(linked);
           return linked;
         } catch (err) {

@@ -26,7 +26,7 @@ export type CheckoutStep = "address" | "shipping" | "payment";
 
 export function useCheckout() {
   const router = useRouter();
-  const { cart, refreshCart, clearCart, isLoading: cartLoading } = useCart();
+  const { cart, refreshCart, isLoading: cartLoading } = useCart();
   const { customer, token } = useAuth();
   const [, startTransition] = useTransition();
 
@@ -207,7 +207,6 @@ export function useCheckout() {
         if (!token) {
           rememberGuestOrder(orderId);
         }
-        clearCart();
         startTransition(() => {
           router.push(`/order/confirmed/${orderId}`);
         });

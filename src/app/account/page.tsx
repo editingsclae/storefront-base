@@ -1,14 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { useCart } from "@/context/CartContext";
 import EmailVerificationCard from "@/components/EmailVerificationCard";
 import {
-  getCustomerOrders,
-  Order,
   formatPrice,
   STORE_NAME,
   getDerivedOrderStatus,
@@ -21,49 +16,20 @@ import {
   Clock,
   BadgeCheck,
 } from "lucide-react";
+import { useAccountOrders } from "@/logic/use-account-orders";
 
 export default function AccountPage() {
-  const router = useRouter();
   const {
     customer,
-    token,
-    logout,
-    isLoading: authLoading,
     emailVerified,
-  } = useAuth();
-  const { clearCart } = useCart();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
-  // Goes up when the email gets confirmed: the orders are loaded again, because
-  // earlier guest orders were just linked to this account
-  const [ordersVersion, setOrdersVersion] = useState(0);
+    authLoading,
+    orders,
+    ordersLoading,
+    reloadOrders,
+    handleLogout,
+  } = useAccountOrders();
 
-  useEffect(() => {
-    if (!authLoading && !customer && !token) {
-      router.push("/account/login");
-    }
-  }, [customer, token, authLoading, router]);
-
-  useEffect(() => {
-    if (!token) return;
-    let isCurrent = true;
-    getCustomerOrders(token)
-      .then((data) => {
-        if (isCurrent) setOrders(data);
-      })
-      .catch((err) => {
-        console.error("Failed to load customer orders:", err);
-      })
-      .finally(() => {
-        if (isCurrent) setOrdersLoading(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [token, ordersVersion]);
-
-  if (authLoading || (!customer && token)) {
+  if (authLoading || (!customer && authLoading)) {
     return (
       <div className="py-16 text-center space-y-3">
         <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -75,11 +41,6 @@ export default function AccountPage() {
   if (!customer) {
     return null;
   }
-
-  const handleLogout = () => {
-    clearCart();
-    logout();
-  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -120,7 +81,7 @@ export default function AccountPage() {
       {emailVerified === false && (
         <EmailVerificationCard
           email={customer.email}
-          onVerified={() => setOrdersVersion((v) => v + 1)}
+          onVerified={reloadOrders}
         />
       )}
 

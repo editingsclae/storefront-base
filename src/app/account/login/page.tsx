@@ -1,48 +1,26 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { STORE_NAME } from "@/lib/medusa";
 import { Lock, ArrowRight, AlertCircle } from "lucide-react";
+import { useLoginForm } from "@/logic/use-login-form";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { login, customer } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (customer) {
-      router.push("/account");
-    }
-  }, [customer, router]);
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    isSubmitting,
+    error,
+    handleSubmit,
+    customer,
+  } = useLoginForm();
 
   if (customer) {
     return null;
   }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      await login(email, password);
-      router.push("/account");
-    } catch (err: unknown) {
-      console.error("Login failed:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(
-        msg || "Invalid email or password. Please check your credentials."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <div className="max-w-md mx-auto py-8">

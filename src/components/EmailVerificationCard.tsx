@@ -1,20 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React from "react";
 import { MailCheck, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import {
-  confirmEmailVerification,
-  getEmailVerification,
-  sendEmailVerification,
-} from "@/lib/medusa";
-import {
-  CODE_LENGTH,
-  cleanCodeInput,
-  describeVerificationError,
-  isCodeComplete,
-  resendLabel,
-} from "@/lib/email-verification";
+import { CODE_LENGTH } from "@/lib/email-verification";
+import { useEmailVerificationCard } from "@/logic/use-email-verification";
 
 interface Props {
   email: string;
@@ -27,86 +16,20 @@ interface Props {
 // still place orders. Confirming links the orders placed as a guest with the
 // same email to the account.
 export default function EmailVerificationCard({ email, onVerified }: Props) {
-  const { token, markEmailVerified } = useAuth();
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState<"send" | "confirm" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [wait, setWait] = useState(0);
-  const [codeSent, setCodeSent] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // How long until a new code can be asked for, and whether one is waiting
-  useEffect(() => {
-    if (!token) return;
-    let current = true;
-    getEmailVerification(token)
-      .then((status) => {
-        if (!current) return;
-        setWait(status.can_resend_in);
-        setCodeSent(status.code_pending);
-      })
-      .catch(() => {
-        // The buttons still work; the backend answers with the real limits
-      });
-    return () => {
-      current = false;
-    };
-  }, [token]);
-
-  // Counts the pause down, one second at a time
-  useEffect(() => {
-    if (wait <= 0) return;
-    const timer = setTimeout(() => setWait((w) => Math.max(0, w - 1)), 1000);
-    return () => clearTimeout(timer);
-  }, [wait]);
-
-  const send = useCallback(async () => {
-    if (!token || busy) return;
-    setBusy("send");
-    setError(null);
-    setNotice(null);
-    try {
-      const res = await sendEmailVerification(token);
-      if (res.verified) {
-        await markEmailVerified();
-        onVerified?.();
-        return;
-      }
-      setCodeSent(true);
-      setWait(res.can_resend_in ?? 60);
-      setNotice(`We sent a code to ${email}.`);
-      inputRef.current?.focus();
-    } catch (err) {
-      const problem = describeVerificationError(err);
-      setError(problem.message);
-      if (problem.retryAfter) setWait(Math.ceil(problem.retryAfter));
-    } finally {
-      setBusy(null);
-    }
-  }, [token, busy, email, markEmailVerified, onVerified]);
-
-  const confirm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || busy) return;
-    if (!isCodeComplete(code)) {
-      setError(`Enter the ${CODE_LENGTH} digit code from the email.`);
-      return;
-    }
-    setBusy("confirm");
-    setError(null);
-    setNotice(null);
-    try {
-      await confirmEmailVerification(token, code);
-      await markEmailVerified();
-      onVerified?.();
-    } catch (err) {
-      const problem = describeVerificationError(err);
-      setError(problem.message);
-      if (problem.clearCode) setCode("");
-      setBusy(null);
-    }
-  };
+  const {
+    code,
+    setCleanCode,
+    busy,
+    error,
+    notice,
+    wait,
+    codeSent,
+    inputRef,
+    send,
+    confirm,
+    isComplete,
+    resendButtonLabel,
+  } = useEmailVerificationCard({ email, onVerified });
 
   return (
     <div className="border border-amber-200 bg-amber-50 rounded-2xl p-5 sm:p-6 space-y-4">
@@ -128,7 +51,7 @@ export default function EmailVerificationCard({ email, onVerified }: Props) {
         <input
           ref={inputRef}
           value={code}
-          onChange={(e) => setCode(cleanCodeInput(e.target.value))}
+          onChange={(e) => setCleanCode(e.target.value)}
           inputMode="numeric"
           autoComplete="one-time-code"
           maxLength={CODE_LENGTH + 4}
@@ -138,7 +61,7 @@ export default function EmailVerificationCard({ email, onVerified }: Props) {
         />
         <button
           type="submit"
-          disabled={busy !== null || !isCodeComplete(code)}
+          disabled={busy !== null || !isComplete}
           className="px-4 py-2 rounded-md bg-zinc-900 text-white text-xs font-semibold hover:bg-black transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {busy === "confirm" ? "Checking..." : "Confirm"}
@@ -149,11 +72,7 @@ export default function EmailVerificationCard({ email, onVerified }: Props) {
           disabled={busy !== null || wait > 0}
           className="px-4 py-2 rounded-md border border-zinc-300 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {busy === "send"
-            ? "Sending..."
-            : codeSent || wait > 0
-            ? resendLabel(wait)
-            : "Send code"}
+          {resendButtonLabel}
         </button>
       </form>
 

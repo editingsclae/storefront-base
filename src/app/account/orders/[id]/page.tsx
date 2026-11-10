@@ -1,18 +1,15 @@
 "use client";
 
-import { showVariantTitle } from "@/lib/variant-select";
-import React, { useEffect, useState, use } from "react";
+import React, { use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import {
-  getOrder,
-  Order,
   formatPrice,
   STORE_NAME,
   getDerivedOrderStatus,
   getDerivedPaymentStatus,
 } from "@/lib/medusa";
+import { showVariantTitle } from "@/logic/variant-select";
+import { useOrderDetails } from "@/logic/use-order-details";
 import {
   ArrowLeft,
   Package,
@@ -27,48 +24,10 @@ interface OrderDetailPageProps {
 }
 
 export default function OrderDetailPage({ params }: OrderDetailPageProps) {
-  const router = useRouter();
   const { id } = use(params);
-  const { customer, token, isLoading: authLoading } = useAuth();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { order, items, totals, loading, error } = useOrderDetails(id);
 
-  useEffect(() => {
-    if (!authLoading && !customer && !token) {
-      router.push("/account/login");
-    }
-  }, [customer, token, authLoading, router]);
-
-  useEffect(() => {
-    if (!token || !id) return;
-    let isCurrent = true;
-
-    getOrder(id, token)
-      .then((ord) => {
-        if (!isCurrent) return;
-        if (ord) {
-          setOrder(ord);
-        } else {
-          setError("Order not found or does not belong to this merchant.");
-        }
-      })
-      .catch((err: unknown) => {
-        if (!isCurrent) return;
-        console.error("Order load error:", err);
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg || "Failed to load order details from backend.");
-      })
-      .finally(() => {
-        if (isCurrent) setLoading(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [token, id]);
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="py-16 text-center space-y-3">
         <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -95,8 +54,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
     );
   }
 
-  const items = order.items || [];
-  const currency = order.currency_code || "TND";
+  const currency = totals.currency;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -131,7 +89,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               Total Amount
             </span>
             <span className="text-xl font-bold font-mono text-zinc-900">
-              {formatPrice(order.total, currency)}
+              {formatPrice(totals.total, currency)}
             </span>
           </div>
         </div>
@@ -210,32 +168,26 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <div className="flex justify-between text-zinc-600">
               <span>Items</span>
               <span className="font-mono">
-                {formatPrice(
-                  order.item_subtotal ??
-                    (order.shipping_subtotal
-                      ? order.subtotal - order.shipping_subtotal
-                      : order.subtotal),
-                  currency
-                )}
+                {formatPrice(totals.itemsSubtotal, currency)}
               </span>
             </div>
             <div className="flex justify-between text-zinc-600">
               <span>Shipping</span>
               <span className="font-mono">
-                {formatPrice(order.shipping_subtotal ?? 0, currency)}
+                {formatPrice(totals.shippingSubtotal, currency)}
               </span>
             </div>
-            {order.tax_total !== undefined && order.tax_total > 0 && (
+            {totals.hasTaxTotal && (
               <div className="flex justify-between text-zinc-600">
                 <span>VAT</span>
                 <span className="font-mono">
-                  {formatPrice(order.tax_total, currency)}
+                  {formatPrice(totals.taxTotal!, currency)}
                 </span>
               </div>
             )}
             <div className="flex justify-between text-base font-extrabold text-zinc-900 pt-2 border-t border-zinc-200">
               <span>Total</span>
-              <span className="font-mono">{formatPrice(order.total, currency)}</span>
+              <span className="font-mono">{formatPrice(totals.total, currency)}</span>
             </div>
           </div>
         </div>

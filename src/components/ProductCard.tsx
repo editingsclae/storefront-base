@@ -25,6 +25,7 @@ export function ProductCard({ product }: ProductCardProps) {
     stockBadge,
     imageUrl,
     badge,
+    subtitle,
   } = getCardState(product);
 
   const handleQuickAdd = async (e: React.MouseEvent) => {
@@ -101,10 +102,10 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.title}
           </Link>
 
-          {/* Description */}
-          {product.description && (
+          {/* Subtitle */}
+          {subtitle && (
             <p className="text-xs text-zinc-500 line-clamp-2">
-              {product.description}
+              {subtitle}
             </p>
           )}
 

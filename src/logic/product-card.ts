@@ -22,6 +22,7 @@ export interface ProductCardState {
   stockBadge: StockBadgeState;
   imageUrl?: string;
   badge: string | null;
+  subtitle: string | null;
 }
 
 /**
@@ -80,6 +81,7 @@ export function getCardState(product: Product): ProductCardState {
   const canQuickAdd = hasSingleVariant && isSingleVariantInStock;
   const imageUrl = product.thumbnail || product.images?.[0]?.url;
   const badge = productBadge(product);
+  const subtitle = product.subtitle?.trim() ? product.subtitle.trim() : null;
 
   return {
     variants,
@@ -96,6 +98,7 @@ export function getCardState(product: Product): ProductCardState {
     stockBadge,
     imageUrl,
     badge,
+    subtitle,
   };
 }
 

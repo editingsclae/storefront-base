@@ -156,6 +156,13 @@ export interface Order {
 }
 
 export function getDerivedOrderStatus(order: { fulfillment_status?: string; status?: string }): string {
+  // A canceled order is canceled, whatever its fulfillment says.
+  if (
+    (order.status || "").toLowerCase() === "canceled" ||
+    (order.fulfillment_status || "").toLowerCase() === "canceled"
+  ) {
+    return "Canceled";
+  }
   const fStatus = (order.fulfillment_status || "").toLowerCase();
   if (fStatus === "delivered") {
     return "Delivered";
@@ -166,8 +173,11 @@ export function getDerivedOrderStatus(order: { fulfillment_status?: string; stat
   return "Order placed";
 }
 
-export function getDerivedPaymentStatus(order: { payment_status?: string }): string {
+export function getDerivedPaymentStatus(order: { payment_status?: string; status?: string }): string {
   const pStatus = (order.payment_status || "").toLowerCase();
+  if ((order.status || "").toLowerCase() === "canceled" || pStatus === "canceled") {
+    return "Payment: canceled";
+  }
   if (pStatus === "captured") {
     return "Payment: received";
   }

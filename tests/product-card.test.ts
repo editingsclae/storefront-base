@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getCardState } from "@/logic/product-card";
+import { getCardState, getOriginalAmount } from "@/logic/product-card";
 import type { Product } from "@/logic/types";
 
 describe("product-card getCardState", () => {
@@ -159,3 +159,31 @@ describe("product-card getCardState", () => {
   });
 });
 
+describe("product-card discounted price", () => {
+  const variant = (id: string, calculated: number, original: number) => ({
+    id,
+    title: id,
+    inventory_quantity: 5,
+    calculated_price: { calculated_amount: calculated, original_amount: original, currency_code: "TND" },
+  });
+
+  it("gives the normal price to cross out when a discount lowered the price", () => {
+    const product: Product = {
+      id: "p",
+      title: "Washer",
+      handle: "washer",
+      variants: [variant("v1", 1260, 1400)],
+    };
+    expect(getCardState(product).originalAmount).toBe(1400);
+  });
+
+  it("gives nothing when there is no discount", () => {
+    expect(getOriginalAmount([variant("v1", 30, 30)], false)).toBeNull();
+    expect(getOriginalAmount([], false)).toBeNull();
+  });
+
+  it("uses the cheapest variant when the prices differ", () => {
+    const variants = [variant("v1", 90, 100), variant("v2", 45, 50), variant("v3", 200, 200)];
+    expect(getOriginalAmount(variants, true)).toBe(50);
+  });
+});

@@ -15,6 +15,8 @@ export interface ProductCardState {
   isSingleVariantInStock: boolean;
   canQuickAdd: boolean;
   price?: ProductVariant["calculated_price"];
+  /** The normal price, shown crossed out, when a discount made the shown price lower */
+  originalAmount: number | null;
   range: { low: number; high: number; currency: string } | null;
   hasRange: boolean;
   hasUnmanagedStock: boolean;
@@ -23,6 +25,24 @@ export interface ProductCardState {
   imageUrl?: string;
   badge: string | null;
   subtitle: string | null;
+}
+
+/**
+ * The normal price to show crossed out next to a discounted one. It belongs to the
+ * variant whose price the card shows (the cheapest one when the prices differ) and
+ * only counts when the discount really made that price lower.
+ */
+export function getOriginalAmount(variants: ProductVariant[], hasRange: boolean): number | null {
+  let shown = variants[0]?.calculated_price;
+  if (hasRange) {
+    for (const v of variants) {
+      const p = v.calculated_price;
+      if (p && (!shown || p.calculated_amount < shown.calculated_amount)) shown = p;
+    }
+  }
+  if (!shown) return null;
+  const original = Number(shown.original_amount);
+  return Number.isFinite(original) && original > shown.calculated_amount ? original : null;
 }
 
 /**
@@ -91,6 +111,7 @@ export function getCardState(product: Product): ProductCardState {
     isSingleVariantInStock,
     canQuickAdd,
     price,
+    originalAmount: getOriginalAmount(variants, hasRange),
     range,
     hasRange,
     hasUnmanagedStock,

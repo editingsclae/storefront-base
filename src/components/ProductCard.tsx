@@ -20,6 +20,7 @@ export function ProductCard({ product }: ProductCardProps) {
     singleVariant,
     canQuickAdd,
     price,
+    originalAmount,
     range,
     hasRange,
     stockBadge,
@@ -120,6 +121,14 @@ export function ProductCard({ product }: ProductCardProps) {
               formatPrice(price.calculated_amount, price.currency_code)
             ) : (
               <span className="text-zinc-400 text-xs">Price on request</span>
+            )}
+            {originalAmount !== null && (hasRange ? range : price) && (
+              <span className="ml-1.5 text-xs font-normal text-zinc-400 line-through">
+                {formatPrice(
+                  originalAmount,
+                  hasRange && range ? range.currency : price!.currency_code
+                )}
+              </span>
             )}
           </div>
         </div>

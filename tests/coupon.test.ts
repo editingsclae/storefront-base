@@ -43,6 +43,11 @@ describe("couponErrorMessage", () => {
     expect(couponErrorMessage(err)).toBe(err.message);
   });
 
+  it("asks a guest to sign in for a one-use-per-customer coupon", () => {
+    const err = new Error('Attribute value for "customer_id" is required by promotion campaing budget');
+    expect(couponErrorMessage(err)).toBe("Sign in to your account to use this coupon.");
+  });
+
   it("says the code is not valid when it is refused", () => {
     expect(couponErrorMessage(new Error("The promotion code NOPE is invalid"))).toBe("This code is not valid.");
   });

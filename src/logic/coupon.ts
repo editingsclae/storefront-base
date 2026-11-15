@@ -27,6 +27,10 @@ export function getDiscountTotal(
 export function couponErrorMessage(err: unknown): string {
   const message = err instanceof Error ? err.message : "";
   if (/at least|minimum/i.test(message)) return message;
+  // A coupon limited to one use per customer needs a signed-in shopper
+  if (/customer_id|campaign budget|campaing budget/i.test(message)) {
+    return "Sign in to your account to use this coupon.";
+  }
   if (/invalid|not found|expired|does not exist/i.test(message)) {
     return "This code is not valid.";
   }

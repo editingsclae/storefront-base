@@ -1,4 +1,5 @@
 import { Address, Cart } from "@/lib/medusa";
+import { getDiscountTotal } from "./coupon";
 
 export interface AddressValidationResult {
   isValid: boolean;
@@ -48,6 +49,8 @@ export function validateAddress(email: string, address: Address): AddressValidat
 export interface CheckoutTotals {
   currencyCode: string;
   itemsSubtotal: number;
+  discountTotal: number;
+  hasDiscountTotal: boolean;
   shippingSubtotal: number | undefined;
   hasShippingSubtotal: boolean;
   taxTotal: number | undefined;
@@ -62,6 +65,7 @@ export function getCheckoutTotals(cart: Cart | null): CheckoutTotals {
     (cart?.shipping_subtotal
       ? (cart?.subtotal ?? 0) - cart.shipping_subtotal
       : (cart?.subtotal ?? 0));
+  const discountTotal = getDiscountTotal(cart);
   const shippingSubtotal = cart?.shipping_subtotal;
   const hasShippingSubtotal =
     shippingSubtotal !== undefined && shippingSubtotal > 0;
@@ -72,6 +76,8 @@ export function getCheckoutTotals(cart: Cart | null): CheckoutTotals {
   return {
     currencyCode,
     itemsSubtotal,
+    discountTotal,
+    hasDiscountTotal: discountTotal > 0,
     shippingSubtotal,
     hasShippingSubtotal,
     taxTotal,

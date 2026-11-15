@@ -161,6 +161,14 @@ export default async function OrderConfirmedPage({
                 </span>
               </div>
             )}
+            {totals.hasDiscountTotal && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Discount</span>
+                <span className="font-mono">
+                  -{formatPrice(totals.discountTotal, currencyCode)}
+                </span>
+              </div>
+            )}
             {totals.shippingSubtotal !== undefined && (
               <div className="flex justify-between text-zinc-600">
                 <span>Shipping</span>

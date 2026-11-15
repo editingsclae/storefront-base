@@ -15,6 +15,8 @@ import {
   addToCart as apiAddToCart,
   updateCartItem as apiUpdateCartItem,
   removeCartItem as apiRemoveCartItem,
+  applyCartPromotion,
+  removeCartPromotion,
   linkCartToCustomer,
 } from "@/lib/medusa";
 import { useAuth } from "./AuthContext";
@@ -29,6 +31,8 @@ interface CartContextType {
   addToCart: (variantId: string, quantity?: number) => Promise<Cart>;
   updateQuantity: (lineItemId: string, quantity: number) => Promise<Cart>;
   removeItem: (lineItemId: string) => Promise<Cart>;
+  applyCoupon: (code: string) => Promise<Cart>;
+  removeCoupon: (code: string) => Promise<Cart>;
   refreshCart: () => Promise<Cart | null>;
   clearCart: () => void;
   ensureCart: () => Promise<Cart>;
@@ -298,6 +302,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const applyCoupon = async (code: string): Promise<Cart> => {
+    if (!cart) throw new Error("No active cart");
+    const generation = generationRef.current;
+    const updated = await applyCartPromotion(cart.id, code, token || undefined);
+    if (generationRef.current !== generation) return updated;
+    setCart(updated);
+    return updated;
+  };
+
+  const removeCoupon = async (code: string): Promise<Cart> => {
+    if (!cart) throw new Error("No active cart");
+    const generation = generationRef.current;
+    const updated = await removeCartPromotion(cart.id, code, token || undefined);
+    if (generationRef.current !== generation) return updated;
+    setCart(updated);
+    return updated;
+  };
+
   const clearCart = useCallback(() => {
     invalidateCartRequests();
     setCartId(null);
@@ -341,6 +363,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addToCart,
         updateQuantity,
         removeItem,
+        applyCoupon,
+        removeCoupon,
         refreshCart,
         clearCart,
         ensureCart,

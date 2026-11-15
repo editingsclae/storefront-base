@@ -65,6 +65,8 @@ describe("order-totals", () => {
     expect(totals).toEqual({
       currency: "TND",
       itemsSubtotal: undefined,
+      discountTotal: 0,
+      hasDiscountTotal: false,
       shippingSubtotal: undefined,
       isShippingFree: false,
       taxTotal: undefined,

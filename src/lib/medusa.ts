@@ -120,6 +120,9 @@ export interface Cart {
   shipping_total: number;
   customer_id?: string | null;
   sales_channel_id?: string;
+  discount_total?: number;
+  // The coupon codes applied to the cart
+  promotions?: Array<{ id?: string; code?: string }>;
   items: LineItem[];
   shipping_address?: Address | null;
   billing_address?: Address | null;
@@ -141,6 +144,7 @@ export interface Order {
   subtotal: number;
   item_subtotal?: number;
   shipping_subtotal?: number;
+  discount_total?: number;
   tax_total: number;
   shipping_total: number;
   currency_code: string;
@@ -974,6 +978,39 @@ export async function updateCart(
     token,
     body: JSON.stringify(updates),
   });
+  return data.cart;
+}
+
+// Coupon codes. The cart comes back with its new totals.
+export async function applyCartPromotion(
+  cartId: string,
+  code: string,
+  token?: string
+): Promise<Cart> {
+  const data = await medusaFetch<{ cart: Cart }>(
+    `/store/carts/${cartId}/promotions`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({ promo_codes: [code] }),
+    }
+  );
+  return data.cart;
+}
+
+export async function removeCartPromotion(
+  cartId: string,
+  code: string,
+  token?: string
+): Promise<Cart> {
+  const data = await medusaFetch<{ cart: Cart }>(
+    `/store/carts/${cartId}/promotions`,
+    {
+      method: "DELETE",
+      token,
+      body: JSON.stringify({ promo_codes: [code] }),
+    }
+  );
   return data.cart;
 }
 

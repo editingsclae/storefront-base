@@ -1,5 +1,6 @@
 import { Cart, LineItem } from "@/lib/medusa";
 import { showVariantTitle } from "./variant-select";
+import { getDiscountTotal } from "./coupon";
 
 export { showVariantTitle };
 
@@ -33,6 +34,8 @@ export function getCartItemCount(cart: Cart | null): number {
 export interface CartSummaryTotals {
   currencyCode: string;
   itemsSubtotal: number;
+  discountTotal: number;
+  hasDiscountTotal: boolean;
   shippingSubtotal: number | undefined;
   hasShippingSubtotal: boolean;
   taxTotal: number | undefined;
@@ -43,6 +46,7 @@ export interface CartSummaryTotals {
 export function getCartSummaryTotals(cart: Cart | null): CartSummaryTotals {
   const currencyCode = cart?.currency_code || "TND";
   const itemsSubtotal = cart?.item_subtotal ?? cart?.subtotal ?? 0;
+  const discountTotal = getDiscountTotal(cart);
   const shippingSubtotal = cart?.shipping_subtotal;
   const hasShippingSubtotal =
     shippingSubtotal !== undefined && shippingSubtotal > 0;
@@ -53,6 +57,8 @@ export function getCartSummaryTotals(cart: Cart | null): CartSummaryTotals {
   return {
     currencyCode,
     itemsSubtotal,
+    discountTotal,
+    hasDiscountTotal: discountTotal > 0,
     shippingSubtotal,
     hasShippingSubtotal,
     taxTotal,

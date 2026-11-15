@@ -13,6 +13,7 @@ import {
 import { formatPrice } from "@/logic";
 import { showVariantTitle } from "@/logic/variant-select";
 import { useCheckout } from "@/logic/use-checkout";
+import { CouponBox } from "@/components/CouponBox";
 
 export default function CheckoutPage() {
   const {
@@ -468,6 +469,10 @@ export default function CheckoutPage() {
             ))}
           </div>
 
+          <div className="pt-3 border-t border-zinc-200">
+            <CouponBox />
+          </div>
+
           <div className="pt-3 border-t border-zinc-200 space-y-2 text-xs">
             <div className="flex justify-between text-zinc-600">
               <span>Items</span>
@@ -475,6 +480,15 @@ export default function CheckoutPage() {
                 {formatPrice(totals.itemsSubtotal, currencyCode)}
               </span>
             </div>
+
+            {totals.hasDiscountTotal && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Discount</span>
+                <span className="font-mono font-semibold">
+                  -{formatPrice(totals.discountTotal, currencyCode)}
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between text-zinc-600">
               <span>Shipping</span>

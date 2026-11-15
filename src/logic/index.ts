@@ -7,6 +7,8 @@ export * from "./use-variant-select";
 export * from "./checkout-validation";
 export * from "./use-checkout";
 export * from "./cart-view";
+export * from "./coupon";
+export * from "./use-coupon";
 export * from "./use-cart-view";
 export * from "./use-login-form";
 export * from "./use-register-form";

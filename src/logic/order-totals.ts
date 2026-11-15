@@ -1,8 +1,11 @@
 import { Order } from "@/lib/medusa";
+import { getDiscountTotal } from "./coupon";
 
 export interface OrderTotals {
   currency: string;
   itemsSubtotal: number | undefined;
+  discountTotal: number;
+  hasDiscountTotal: boolean;
   shippingSubtotal: number | undefined;
   isShippingFree: boolean;
   taxTotal: number | undefined;
@@ -17,6 +20,7 @@ export function getOrderTotals(order: Order | null): OrderTotals {
     (order?.shipping_subtotal !== undefined
       ? (order?.subtotal !== undefined ? order.subtotal - order.shipping_subtotal : undefined)
       : order?.subtotal);
+  const discountTotal = getDiscountTotal(order);
   const shippingSubtotal = order?.shipping_subtotal;
   const isShippingFree = shippingSubtotal === 0;
   const taxTotal = order?.tax_total;
@@ -26,6 +30,8 @@ export function getOrderTotals(order: Order | null): OrderTotals {
   return {
     currency,
     itemsSubtotal,
+    discountTotal,
+    hasDiscountTotal: discountTotal > 0,
     shippingSubtotal,
     isShippingFree,
     taxTotal,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   couponErrorMessage,
+  isCouponProblem,
   getAppliedCoupons,
   getDiscountTotal,
   normalizeCouponInput,
@@ -34,6 +35,18 @@ describe("getDiscountTotal", () => {
     expect(getDiscountTotal({ discount_total: -3 })).toBe(0);
     expect(getDiscountTotal({})).toBe(0);
     expect(getDiscountTotal(null)).toBe(0);
+  });
+});
+
+describe("isCouponProblem", () => {
+  it("knows a problem that is about the coupon", () => {
+    expect(isCouponProblem("This coupon needs an order of at least 100.00 TND.")).toBe(true);
+    expect(isCouponProblem("Promotion usage limit exceeded")).toBe(true);
+  });
+
+  it("leaves other order problems alone", () => {
+    expect(isCouponProblem("The cart items require shipping profiles")).toBe(false);
+    expect(isCouponProblem("")).toBe(false);
   });
 });
 

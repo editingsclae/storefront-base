@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Tag, X } from "lucide-react";
 import { useCouponBox } from "@/logic/use-coupon";
 
@@ -9,9 +9,15 @@ import { useCouponBox } from "@/logic/use-coupon";
 export function CouponBox() {
   const { code, setCode, busy, error, applied, canApply, apply, remove } =
     useCouponBox();
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // A message about the coupon must not stay out of sight
+  useEffect(() => {
+    if (error) boxRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [error]);
 
   return (
-    <div className="space-y-2">
+    <div ref={boxRef} className="space-y-2">
       <form
         onSubmit={(e) => {
           e.preventDefault();

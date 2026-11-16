@@ -22,6 +22,12 @@ export function getDiscountTotal(
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+// A problem placing the order that is about the coupon (a minimum order, for example).
+// The shopper sees it under the coupon box, where they can fix it.
+export function isCouponProblem(message: string): boolean {
+  return /coupon|promotion|promo code/i.test(message);
+}
+
 // What to tell the shopper when a code is refused. The backend's own words are kept when
 // they are about the order (a minimum, for example), because they say what to do.
 export function couponErrorMessage(err: unknown): string {

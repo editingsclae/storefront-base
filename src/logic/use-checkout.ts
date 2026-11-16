@@ -21,12 +21,13 @@ import {
   getCheckoutTotals,
   CheckoutTotals,
 } from "./checkout-validation";
+import { isCouponProblem } from "./coupon";
 
 export type CheckoutStep = "address" | "shipping" | "payment";
 
 export function useCheckout() {
   const router = useRouter();
-  const { cart, refreshCart, isLoading: cartLoading } = useCart();
+  const { cart, refreshCart, setCouponMessage, isLoading: cartLoading } = useCart();
   const { customer, token } = useAuth();
   const [, startTransition] = useTransition();
 
@@ -177,6 +178,7 @@ export function useCheckout() {
   const handlePlaceOrder = async () => {
     if (!cart) return;
     setErrorMessage(null);
+    setCouponMessage(null);
     setSubmittingOrder(true);
 
     try {
@@ -227,7 +229,10 @@ export function useCheckout() {
     } catch (err: unknown) {
       console.error("Place order failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes("shipping profile")) {
+      if (isCouponProblem(msg)) {
+        // About the coupon: shown under the coupon box, where the shopper can fix it
+        setCouponMessage(msg);
+      } else if (msg.toLowerCase().includes("shipping profile")) {
         setErrorMessage(
           "The cart items require shipping profiles that are not satisfied by the merchant. Please contact store support."
         );

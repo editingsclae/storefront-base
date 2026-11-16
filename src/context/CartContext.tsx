@@ -33,6 +33,9 @@ interface CartContextType {
   removeItem: (lineItemId: string) => Promise<Cart>;
   applyCoupon: (code: string) => Promise<Cart>;
   removeCoupon: (code: string) => Promise<Cart>;
+  // A coupon problem found when the order is placed, shown under the coupon box
+  couponMessage: string | null;
+  setCouponMessage: (message: string | null) => void;
   refreshCart: () => Promise<Cart | null>;
   clearCart: () => void;
   ensureCart: () => Promise<Cart>;
@@ -46,6 +49,7 @@ const CART_KEY = "medusa_cart_id";
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { token } = useAuth();
 
@@ -233,6 +237,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     quantity = 1
   ): Promise<Cart> => {
     setIsLoading(true);
+    // A message about the coupon was about the cart as it was
+    setCouponMessage(null);
     const generation = generationRef.current;
     try {
       const activeCart = cart || (await ensureCart());
@@ -261,6 +267,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   ): Promise<Cart> => {
     if (!cart) throw new Error("No active cart");
     setIsLoading(true);
+    // A message about the coupon was about the cart as it was
+    setCouponMessage(null);
     const generation = generationRef.current;
     try {
       if (quantity <= 0) {
@@ -285,6 +293,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = async (lineItemId: string): Promise<Cart> => {
     if (!cart) throw new Error("No active cart");
     setIsLoading(true);
+    // A message about the coupon was about the cart as it was
+    setCouponMessage(null);
     const generation = generationRef.current;
     try {
       const updated = await apiRemoveCartItem(
@@ -365,6 +375,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeItem,
         applyCoupon,
         removeCoupon,
+        couponMessage,
+        setCouponMessage,
         refreshCart,
         clearCart,
         ensureCart,

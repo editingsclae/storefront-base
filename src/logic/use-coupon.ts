@@ -10,12 +10,13 @@ import {
 
 // The state of the coupon box in the cart and at checkout
 export function useCouponBox() {
-  const { cart, applyCoupon, removeCoupon } = useCart();
+  const { cart, applyCoupon, removeCoupon, couponMessage, setCouponMessage } = useCart();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const applied = getAppliedCoupons(cart);
+  const shownError = error ?? couponMessage;
 
   const apply = async () => {
     const clean = normalizeCouponInput(code);
@@ -29,6 +30,7 @@ export function useCouponBox() {
     }
     setBusy(true);
     setError(null);
+    setCouponMessage(null);
     try {
       const updated = await applyCoupon(clean);
       // A code the backend did not keep is not valid for this store
@@ -47,6 +49,7 @@ export function useCouponBox() {
   const remove = async (appliedCode: string) => {
     setBusy(true);
     setError(null);
+    setCouponMessage(null);
     try {
       await removeCoupon(appliedCode);
     } catch (err) {
@@ -60,7 +63,7 @@ export function useCouponBox() {
     code,
     setCode,
     busy,
-    error,
+    error: shownError,
     applied,
     canApply: !busy && normalizeCouponInput(code).length > 0,
     apply,
